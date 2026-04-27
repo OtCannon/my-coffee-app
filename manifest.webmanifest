@@ -1,0 +1,1 @@
+{"name":"Coffee Log","short_name":"CoffeeLog","description":"Professional coffee sensory logging application.","start_url":"./","display":"standalone","background_color":"#f8f9fa","theme_color":"#b45309","lang":"en","scope":"/my-coffee-app/","icons":[{"src":"icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}
