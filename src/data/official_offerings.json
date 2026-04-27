@@ -1,0 +1,35 @@
+[
+  {
+    "id": "offering-001",
+    "store": "Simple Kaffa (興波咖啡)",
+    "name": "Ethiopia Yirgacheffe",
+    "origin": "Ethiopia (衣索比亞)",
+    "process": "Washed (水洗)",
+    "roast": "Light (淺焙)",
+    "flavors": ["Floral", "Citrus", "Black Tea"],
+    "description": "經典耶加雪菲風味，清新花香與柑橘調性。",
+    "price": 350
+  },
+  {
+    "id": "offering-002",
+    "store": "Coffee Stopover",
+    "name": "Dark Knight",
+    "origin": "Brazil (巴西)",
+    "process": "Natural (日曬)",
+    "roast": "Dark (深焙)",
+    "flavors": ["Chocolate", "Nutty", "Caramel"],
+    "description": "厚實的巧克力與堅果香氣，適合加牛奶或濃縮。",
+    "price": 400
+  },
+  {
+    "id": "offering-003",
+    "store": "All Day Roasting Company",
+    "name": "Kenya AA",
+    "origin": "Kenya (肯亞)",
+    "process": "Washed (水洗)",
+    "roast": "Medium-Light (淺中焙)",
+    "flavors": ["Berry", "Tomato", "Lemon"],
+    "description": "明亮的黑醋栗酸質，層次豐富。",
+    "price": 450
+  }
+]
