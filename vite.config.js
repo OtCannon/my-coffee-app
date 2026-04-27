@@ -2,15 +2,12 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
-import basicSsl from '@vitejs/plugin-basic-ssl'
 
 export default defineConfig({
   base: process.env.NODE_ENV === 'production' ? '/my-coffee-app/' : '/',
   plugins: [
     vue(),
     tailwindcss(),
-    // 只在開發環境使用 SSL，GitHub Pages 自帶 HTTPS
-    process.env.NODE_ENV === 'development' ? basicSsl() : null,
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
