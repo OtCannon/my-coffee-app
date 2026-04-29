@@ -2,6 +2,40 @@
   <div class="space-y-8 pb-24">
     <h2 class="text-2xl font-black text-gray-900">Settings & Data</h2>
 
+    <!-- Google Sheets Sync Section -->
+    <div class="bg-white shadow-xl rounded-3xl p-6 border border-gray-100/50">
+      <h3 class="text-sm font-bold text-gray-800 mb-6 flex items-center uppercase tracking-widest">
+        <span class="w-2 h-6 bg-emerald-500 rounded-full mr-3"></span>
+        Google Sheets Sync
+      </h3>
+      
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <label class="text-[10px] font-black text-gray-400 uppercase ml-1">Script URL</label>
+          <input 
+            v-model="googleScriptUrl"
+            type="password"
+            placeholder="https://script.google.com/macros/s/..."
+            class="w-full px-4 py-3 rounded-2xl border-2 border-gray-100 focus:border-emerald-500 focus:ring-0 transition-all bg-gray-50/50 text-sm"
+          >
+        </div>
+
+        <button 
+          @click="syncToGoogleSheets"
+          :disabled="!googleScriptUrl || isSyncing"
+          class="w-full py-4 bg-emerald-600 text-white font-bold rounded-2xl shadow-lg hover:bg-emerald-700 transition-all flex items-center justify-center space-x-2 disabled:opacity-30"
+        >
+          <div v-if="isSyncing" class="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+          <CloudIcon v-else :size="20" />
+          <span>{{ isSyncing ? 'Syncing...' : 'Sync All to Google Sheets' }}</span>
+        </button>
+        
+        <p class="text-[10px] text-gray-400 text-center italic">
+          Tip: This will append all local records to your spreadsheet.
+        </p>
+      </div>
+    </div>
+
     <!-- Backup Section -->
     <div class="bg-white shadow-xl rounded-3xl p-6 border border-gray-100/50">
       <h3 class="text-sm font-bold text-gray-800 mb-6 flex items-center uppercase tracking-widest">
@@ -76,22 +110,28 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { Download as DownloadIcon, Upload as UploadIcon, Trash2 as TrashIcon } from 'lucide-vue-next';
+import { ref, onMounted, computed, watch } from 'vue';
+import { Download as DownloadIcon, Upload as UploadIcon, Trash2 as TrashIcon, Cloud as CloudIcon } from 'lucide-vue-next';
+import * as db from '../utils/db.js';
 
 const storageSize = ref('0 KB');
+const googleScriptUrl = ref(localStorage.getItem('google_script_url') || '');
+const isSyncing = ref(false);
 
-const calculateStorageSize = () => {
-  const history = localStorage.getItem('coffee_history') || '[]';
-  const size = (new Blob([history]).size / 1024).toFixed(2);
-  storageSize.value = `${size} KB`;
+watch(googleScriptUrl, (newVal) => {
+  localStorage.setItem('google_script_url', newVal);
+});
+
+const calculateStorageSize = async () => {
+  const { usageMB } = await db.getStorageQuota();
+  storageSize.value = `${usageMB} MB`;
 };
 
 onMounted(calculateStorageSize);
 
-const exportData = () => {
-  const history = localStorage.getItem('coffee_history') || '[]';
-  const blob = new Blob([history], { type: 'application/json' });
+const exportData = async () => {
+  const history = await db.getAllRecords();
+  const blob = new Blob([JSON.stringify(history)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -115,16 +155,17 @@ const importData = (event) => {
       }
       
       if (confirm(`Import ${importedData.length} records? This will merge with your existing history.`)) {
-        const history = JSON.parse(localStorage.getItem('coffee_history') || '[]');
-        // Simple merge by ID to avoid duplicates
-        const existingIds = new Set(history.map(r => r.id));
-        const newRecords = importedData.filter(r => !existingIds.has(r.id));
-        
-        const merged = [...newRecords, ...history];
-        localStorage.setItem('coffee_history', JSON.stringify(merged));
-        calculateStorageSize();
-        alert(`Successfully imported ${newRecords.length} new records!`);
-        location.reload(); // Refresh to update all views
+        db.getAllRecords().then(async history => {
+          const existingIds = new Set(history.map(r => r.id));
+          const newRecords = importedData.filter(r => !existingIds.has(r.id));
+          
+          for (const r of newRecords) {
+            await db.saveRecord(r);
+          }
+          await calculateStorageSize();
+          alert(`Successfully imported ${newRecords.length} new records!`);
+          location.reload(); // Refresh to update all views
+        });
       }
     } catch (err) {
       alert('Error importing data: ' + err.message);
@@ -133,10 +174,46 @@ const importData = (event) => {
   reader.readAsText(file);
 };
 
-const clearHistory = () => {
+const syncToGoogleSheets = async () => {
+  if (!googleScriptUrl.value) return;
+  
+  const history = await db.getAllRecords();
+  
+  isSyncing.value = true;
+  try {
+    // We use text/plain to avoid preflight OPTIONS request that GAS doesn't support well
+    const response = await fetch(googleScriptUrl.value, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain'
+      },
+      body: JSON.stringify(history)
+    });
+
+    if (!response.ok) throw new Error('Network response was not ok');
+    
+    const mergedData = await response.json();
+    
+    // Update local storage with the merged authoritative data from cloud
+    for (const r of mergedData) {
+      await db.saveRecord(r);
+    }
+    await calculateStorageSize();
+    
+    alert(`Sync Successful! Cloud & Phone are now perfectly mirrored. (${mergedData.length} total records)`);
+    location.reload(); // Refresh views
+  } catch (err) {
+    console.error('Sync error:', err);
+    alert('Failed to sync: ' + err.message + '\nNote: Make sure you deployed the NEW version of GAS script.');
+  } finally {
+    isSyncing.value = false;
+  }
+};
+
+const clearHistory = async () => {
   if (confirm('CRITICAL WARNING: This will PERMANENTLY DELETE all your coffee records. This action cannot be undone. Are you absolutely sure?')) {
-    localStorage.removeItem('coffee_history');
-    calculateStorageSize();
+    await db.clearAllRecords();
+    await calculateStorageSize();
     alert('All records have been cleared.');
     location.reload();
   }

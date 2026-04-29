@@ -99,7 +99,7 @@ const analyzePreferences = () => {
     history.forEach(record => {
       // 兼容舊版整體評分 key 名稱
       const score = record.overallScore || record.score || 0;
-      if (score < 10) return;
+      if (score < 4.5) return;
 
       const flavors = record.flavors || record.selectedFlavors || [];
       flavors.forEach(f => {
@@ -109,7 +109,7 @@ const analyzePreferences = () => {
         else if (f.name) name = f.name;
         else if (typeof f === 'string') name = f;
 
-        if (name) flavorCounts[name] = (flavorCounts[name] || 0) + (score / 15);
+        if (name) flavorCounts[name] = (flavorCounts[name] || 0) + (score / 5);
       });
     });
 

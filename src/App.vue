@@ -27,11 +27,19 @@
 
     <!-- Initial Loading Screen -->
     <LoadingScreen @finished="appReady = true" />
+
+    <!-- PWA Update Notification -->
+    <div v-if="needRefresh" class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center space-x-4 z-50">
+      <span class="text-sm font-bold">New version available!</span>
+      <button @click="updateServiceWorker()" class="text-amber-400 font-black text-sm uppercase hover:text-amber-300 transition-colors">Update</button>
+      <button @click="closePrompt" class="text-gray-400 hover:text-white transition-colors">✕</button>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
+import { useRegisterSW } from 'virtual:pwa-register/vue';
 import { User as UserIcon } from 'lucide-vue-next';
 import BottomNav from './components/BottomNav.vue';
 import HomeView from './components/HomeView.vue';
@@ -45,6 +53,16 @@ import LoadingScreen from './components/LoadingScreen.vue';
 const appReady = ref(false);
 const activeTab = ref('home');
 const editingRecord = ref(null);
+
+// PWA Logic
+const {
+  needRefresh,
+  updateServiceWorker,
+} = useRegisterSW();
+
+const closePrompt = () => {
+  needRefresh.value = false;
+};
 
 const currentView = computed(() => {
   switch (activeTab.value) {

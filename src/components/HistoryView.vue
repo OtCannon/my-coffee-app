@@ -138,6 +138,7 @@ import {
   ArcElement
 } from 'chart.js';
 import { Bar, Radar, Doughnut } from 'vue-chartjs';
+import * as db from '../utils/db.js';
 
 ChartJS.register(
   Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale,
@@ -146,8 +147,9 @@ ChartJS.register(
 
 const records = ref([]);
 
-onMounted(() => {
-  records.value = JSON.parse(localStorage.getItem('coffee_history') || '[]');
+onMounted(async () => {
+  const history = await db.getAllRecords();
+  records.value = history.filter(r => r.isActive !== false);
 });
 
 // Stats calculations
@@ -183,15 +185,24 @@ const calculateCorrelation = (x, y) => {
 const correlations = computed(() => {
   if (records.value.length < 5) return [];
   
+  // 排除 roastLevel 為 0 (Unknown) 的紀錄
+  const roastRecords = records.value.filter(r => r.roastLevel && r.roastLevel !== 0);
+  
   const scores = records.value.map(r => parseFloat(r.score));
   const acidity = records.value.map(r => parseFloat(r.scores.acidity));
   const bitterness = records.value.map(r => parseFloat(r.scores.bitterness));
+  const sweetness = records.value.map(r => parseFloat(r.scores.sweetness || 3));
   const body = records.value.map(r => parseFloat(r.scores.body));
+  
+  const roastScores = roastRecords.map(r => parseFloat(r.score));
+  const roastLevels = roastRecords.map(r => parseFloat(r.roastLevel));
   
   const results = [
     { label: 'Acidity', value: calculateCorrelation(acidity, scores) },
     { label: 'Bitterness', value: calculateCorrelation(bitterness, scores) },
-    { label: 'Body', value: calculateCorrelation(body, scores) }
+    { label: 'Sweetness', value: calculateCorrelation(sweetness, scores) },
+    { label: 'Body', value: calculateCorrelation(body, scores) },
+    { label: 'Roast Depth', value: calculateCorrelation(roastLevels, roastScores) }
   ];
   
   return results.map(r => ({
@@ -274,18 +285,19 @@ const discoveryInsight = computed(() => {
 
 // Radar Chart Data (Avg Scores)
 const radarData = computed(() => {
-  const avg = { acidity: 0, bitterness: 0, body: 0 };
+  const avg = { acidity: 0, bitterness: 0, sweetness: 0, body: 0 };
   records.value.forEach(r => {
-    avg.acidity += parseFloat(r.scores.acidity);
-    avg.bitterness += parseFloat(r.scores.bitterness);
-    avg.body += parseFloat(r.scores.body);
+    avg.acidity += parseFloat(r.scores.acidity || 3);
+    avg.bitterness += parseFloat(r.scores.bitterness || 3);
+    avg.sweetness += parseFloat(r.scores.sweetness || 3);
+    avg.body += parseFloat(r.scores.body || 3);
   });
   const count = records.value.length;
   return {
-    labels: ['Acidity', 'Bitterness', 'Body'],
+    labels: ['Acidity', 'Bitterness', 'Sweetness', 'Body'],
     datasets: [{
       label: 'Average Score',
-      data: [avg.acidity / count, avg.bitterness / count, avg.body / count],
+      data: [avg.acidity / count, avg.bitterness / count, avg.sweetness / count, avg.body / count],
       backgroundColor: 'rgba(147, 51, 234, 0.2)',
       borderColor: 'rgba(147, 51, 234, 1)',
       borderWidth: 2,
