@@ -34,10 +34,13 @@
     </div>
 
     <!-- Options List -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+    <div v-if="loading" class="flex justify-center py-10">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+    </div>
+    <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-2">
       <div
         v-for="item in currentOptions"
-        :key="item.name"
+        :key="item.id"
         class="relative group"
       >
         <button
@@ -46,19 +49,16 @@
         >
           <span 
             class="font-bold text-gray-800 text-center leading-tight text-xs"
-            :class="{ 'pr-4': item.children && item.children.length > 0 }"
           >
             {{ item.name }}
           </span>
-          <span v-if="item.description" class="text-[8px] text-gray-400 mt-1 text-center line-clamp-1 leading-tight">{{ item.description }}</span>
         </button>
 
-        <!-- Selection Button for Categories (1st/2nd layer) -->
+        <!-- Selection Button for Categories -->
         <button 
-          v-if="item.children && item.children.length > 0"
           @click.stop="emit('flavor-selected', item)"
           class="absolute top-1 right-1 w-7 h-7 bg-purple-100/80 text-purple-700 rounded-lg flex items-center justify-center hover:bg-purple-600 hover:text-white transition-all shadow-sm active:scale-90 z-10"
-          title="Add this category as flavor"
+          title="Add this as flavor"
         >
           <PlusIcon :size="14" :stroke-width="4" />
         </button>
@@ -68,21 +68,16 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { Plus as PlusIcon } from 'lucide-vue-next';
-import flavorData from '../data/flavorLexicon.json';
+import * as db from '../utils/db.js';
 
 const emit = defineEmits(['flavor-selected']);
 
 // State
-const path = ref([]); // Stores selected objects {name, children}
-
-const currentOptions = computed(() => {
-  if (path.value.length === 0) {
-    return flavorData.children;
-  }
-  return path.value[path.value.length - 1].children;
-});
+const path = ref([]); // Stores selected objects {id, name}
+const currentOptions = ref([]);
+const loading = ref(false);
 
 const currentCategoryName = computed(() => {
   if (path.value.length === 0) {
@@ -91,9 +86,23 @@ const currentCategoryName = computed(() => {
   return path.value[path.value.length - 1].name;
 });
 
+const loadOptions = async () => {
+  loading.value = true;
+  try {
+    const parentId = path.value.length > 0 ? path.value[path.value.length - 1].id : null;
+    currentOptions.value = await db.getFlavorTaxonomy(parentId);
+  } catch (err) {
+    console.error('Failed to load flavors:', err);
+  } finally {
+    loading.value = false;
+  }
+};
+
 // Actions
-const selectItem = (item) => {
-  if (item.children && item.children.length > 0) {
+const selectItem = async (item) => {
+  // Check if this item has children
+  const children = await db.getFlavorTaxonomy(item.id);
+  if (children.length > 0) {
     path.value.push(item);
   } else {
     // Leaf node reached
@@ -114,4 +123,7 @@ const goToLevel = (index) => {
     path.value = path.value.slice(0, index + 1);
   }
 };
+
+onMounted(loadOptions);
+watch(path, loadOptions, { deep: true });
 </script>

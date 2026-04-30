@@ -11,7 +11,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'prompt',
       injectRegister: 'auto',
-      includeAssets: ['favicon.svg', 'icons/icon-512.png'],
+      includeAssets: ['favicon.svg', 'icons/icon-512.png', 'coffee.sqlite'],
       manifest: {
         name: 'Coffee Log',
         short_name: 'CoffeeLog',
@@ -30,7 +30,7 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json,sqlite}'],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: false,

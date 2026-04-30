@@ -43,7 +43,15 @@
                 </svg>
                 <span class="text-[9px] font-bold text-gray-500 uppercase">{{ record.roastLevel ? ['Light', 'M-Light', 'Med', 'M-Dark', 'Dark'][record.roastLevel - 1] : 'Unk' }}</span>
               </div>
-              <span v-if="record.roastLevel" class="text-gray-300">/</span>
+              <span class="text-gray-300">/</span>
+              <!-- Intensity Indicator -->
+              <div class="flex items-center space-x-1">
+                <div class="flex space-x-0.5">
+                  <div v-for="i in 5" :key="i" class="w-1.5 h-1.5 rounded-full" :class="i <= (record.intensity || 3) ? 'bg-purple-500' : 'bg-gray-200'"></div>
+                </div>
+                <span class="text-[9px] font-bold text-purple-600 uppercase ml-1">Int: {{ record.intensity || 3 }}</span>
+              </div>
+              <span class="text-gray-300">/</span>
               <span class="text-[10px] font-bold text-gray-400">{{ formatDate(record.date) }}</span>
             </div>
             <h3 class="text-xl font-black text-gray-900 leading-tight mb-2">{{ record.coffeeName }}</h3>
@@ -51,7 +59,7 @@
             <div class="flex flex-wrap gap-2 items-center">
               <span class="bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-amber-100 flex items-center">
                 <MapPinIcon :size="10" class="mr-1" />
-                {{ record.beanOrigin }}
+                {{ record.beanOrigin || 'Unknown' }}
               </span>
               <span v-if="record.beanEstate" class="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-emerald-100 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -60,7 +68,7 @@
                 {{ record.beanEstate }}
               </span>
               <span class="bg-gray-50 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded-md border border-gray-100">
-                {{ record.beanProcess }}
+                {{ record.beanProcess || 'Unknown' }}
               </span>
             </div>
           </div>
@@ -146,14 +154,8 @@ const loadRecords = async () => {
 
 const deleteRecord = async (id) => {
   if (confirm('Are you sure you want to delete this record?')) {
-    const history = await db.getAllRecords();
-    const record = history.find(r => r.id === id);
-    if (record) {
-      record.isActive = false;
-      record.updatedAt = new Date().toISOString();
-      await db.saveRecord(record);
-      await loadRecords();
-    }
+    await db.deleteRecord(id);
+    await loadRecords();
   }
 };
 

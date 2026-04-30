@@ -172,6 +172,9 @@
       </div>
     </div>
 
+    <!-- Intensity Slider Card -->
+    <IntensitySlider v-model="formData.intensity" />
+
     <!-- Sensory Scores Card -->
     <div class="bg-white shadow-xl rounded-3xl p-6 border border-gray-100/50">
       <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
@@ -294,6 +297,7 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from 'vue';
 import FlavorDrillDown from './FlavorDrillDown.vue';
+import IntensitySlider from './IntensitySlider.vue';
 import beansData from '../data/beans.json';
 import * as db from '../utils/db.js';
 
@@ -328,6 +332,7 @@ const initialFormData = {
   beanEstate: '',
   beanProcess: '',
   roastLevel: 3,
+  intensity: 3,
   scores: {
     acidity: 3,
     bitterness: 3,
@@ -417,6 +422,7 @@ const filteredHistoryEstates = computed(() => {
 const addFlavor = (flavor) => {
   if (!formData.selectedFlavors.some(f => f.name === flavor.name)) {
     formData.selectedFlavors.push({ 
+      id: flavor.id,
       name: flavor.name
     });
   }
