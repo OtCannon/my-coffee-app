@@ -82,8 +82,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { Search as SearchIcon, Sparkles as SparklesIcon } from 'lucide-vue-next';
-import officialOfferings from '../data/official_offerings.json';
+import { searchOfferings } from '../utils/sqlite.js';
 
+const officialOfferings = ref([]);
 const searchQuery = ref('');
 const userPreferences = ref([]);
 const topPreferences = ref([]);
@@ -124,23 +125,23 @@ const analyzePreferences = () => {
   }
 };
 
-onMounted(analyzePreferences);
+onMounted(async () => {
+  analyzePreferences();
+  officialOfferings.value = await searchOfferings('');
+});
 
 const filteredOfferings = computed(() => {
-  let list = officialOfferings.map(item => {
-    const matches = item.flavors.filter(f => userPreferences.value.includes(f));
+  let list = officialOfferings.value.map(item => {
+    const matches = (item.flavors || []).filter(f => userPreferences.value.includes(f));
     return { ...item, matchScore: matches.length };
   });
 
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase();
-    list = list.filter(item => 
-      item.store.toLowerCase().includes(q) ||
-      item.name.toLowerCase().includes(q) ||
-      item.flavors.some(f => f.toLowerCase().includes(q))
-    );
-  }
-
   return list.sort((a, b) => b.matchScore - a.matchScore || a.store.localeCompare(b.store));
 });
+
+import { watch } from 'vue';
+watch(searchQuery, async (newQuery) => {
+  officialOfferings.value = await searchOfferings(newQuery);
+});
+
 </script>

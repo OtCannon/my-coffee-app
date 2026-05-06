@@ -34,10 +34,7 @@
     </div>
 
     <!-- Options List -->
-    <div v-if="loading" class="flex justify-center py-10">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-    </div>
-    <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
       <div
         v-for="item in currentOptions"
         :key="item.id"
@@ -68,52 +65,58 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { Plus as PlusIcon } from 'lucide-vue-next';
-import * as db from '../utils/db.js';
+import flavorLexicon from '../data/flavorLexicon.json';
 
 const emit = defineEmits(['flavor-selected']);
 
-// State
-const path = ref([]); // Stores selected objects {id, name}
-const currentOptions = ref([]);
-const loading = ref(false);
+// --- Flatten the JSON tree into a lookup map with stable IDs ---
+const nodeMap = new Map(); // id -> node with {id, name, children, parentId}
+let _idCounter = 1;
+
+function buildMap(nodes, parentId = null) {
+  return nodes.map(node => {
+    const id = _idCounter++;
+    const mapped = {
+      id,
+      name: node.name,
+      parentId,
+      hasChildren: !!(node.children && node.children.length > 0)
+    };
+    nodeMap.set(id, mapped);
+    if (node.children) buildMap(node.children, id);
+    return mapped;
+  });
+}
+
+const rootNodes = buildMap(flavorLexicon.children);
+
+// --- State ---
+const path = ref([]); // [{id, name}]
 
 const currentCategoryName = computed(() => {
-  if (path.value.length === 0) {
-    return 'Flavors';
-  }
+  if (path.value.length === 0) return 'Flavors';
   return path.value[path.value.length - 1].name;
 });
 
-const loadOptions = async () => {
-  loading.value = true;
-  try {
-    const parentId = path.value.length > 0 ? path.value[path.value.length - 1].id : null;
-    currentOptions.value = await db.getFlavorTaxonomy(parentId);
-  } catch (err) {
-    console.error('Failed to load flavors:', err);
-  } finally {
-    loading.value = false;
-  }
-};
+const currentOptions = computed(() => {
+  if (path.value.length === 0) return rootNodes;
+  const parentId = path.value[path.value.length - 1].id;
+  return [...nodeMap.values()].filter(n => n.parentId === parentId);
+});
 
 // Actions
-const selectItem = async (item) => {
-  // Check if this item has children
-  const children = await db.getFlavorTaxonomy(item.id);
-  if (children.length > 0) {
-    path.value.push(item);
+const selectItem = (item) => {
+  if (item.hasChildren) {
+    path.value.push({ id: item.id, name: item.name });
   } else {
-    // Leaf node reached
-    emit('flavor-selected', item);
+    emit('flavor-selected', { id: item.id, name: item.name });
   }
 };
 
 const goBack = () => {
-  if (path.value.length > 0) {
-    path.value.pop();
-  }
+  if (path.value.length > 0) path.value.pop();
 };
 
 const goToLevel = (index) => {
@@ -123,7 +126,4 @@ const goToLevel = (index) => {
     path.value = path.value.slice(0, index + 1);
   }
 };
-
-onMounted(loadOptions);
-watch(path, loadOptions, { deep: true });
 </script>

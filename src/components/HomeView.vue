@@ -44,14 +44,6 @@
                 <span class="text-[9px] font-bold text-gray-500 uppercase">{{ record.roastLevel ? ['Light', 'M-Light', 'Med', 'M-Dark', 'Dark'][record.roastLevel - 1] : 'Unk' }}</span>
               </div>
               <span class="text-gray-300">/</span>
-              <!-- Intensity Indicator -->
-              <div class="flex items-center space-x-1">
-                <div class="flex space-x-0.5">
-                  <div v-for="i in 5" :key="i" class="w-1.5 h-1.5 rounded-full" :class="i <= (record.intensity || 3) ? 'bg-purple-500' : 'bg-gray-200'"></div>
-                </div>
-                <span class="text-[9px] font-bold text-purple-600 uppercase ml-1">Int: {{ record.intensity || 3 }}</span>
-              </div>
-              <span class="text-gray-300">/</span>
               <span class="text-[10px] font-bold text-gray-400">{{ formatDate(record.date) }}</span>
             </div>
             <h3 class="text-xl font-black text-gray-900 leading-tight mb-2">{{ record.coffeeName }}</h3>
@@ -131,7 +123,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { Coffee as CoffeeIcon, Trash2 as TrashIcon, Edit3 as EditIcon, MapPin as MapPinIcon } from 'lucide-vue-next';
-import * as db from '../utils/db.js';
+import * as recordStore from '../utils/recordStore.js';
 
 const emit = defineEmits(['edit-record']);
 const records = ref([]);
@@ -148,13 +140,13 @@ const sortedRecords = computed(() => {
 });
 
 const loadRecords = async () => {
-  const history = await db.getAllRecords();
+  const history = await recordStore.getAllRecords();
   records.value = history.filter(r => r.isActive !== false);
 };
 
 const deleteRecord = async (id) => {
   if (confirm('Are you sure you want to delete this record?')) {
-    await db.deleteRecord(id);
+    await recordStore.deleteRecord(id);
     await loadRecords();
   }
 };

@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 
+
 # Editor directories and files
 .vscode/*
 .agent/*
@@ -24,3 +25,13 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Database & Archiving
+archive/
+database-manager/raw_html/
+database-manager/venv/
+database-manager/__pycache__/
+database-manager/.pytest_cache/
+
+# 如果你「完全不想」上傳 Python 腳本（連 code 都不上傳），請把下面這行取消註解：
+database-manager/

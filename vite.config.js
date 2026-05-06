@@ -6,7 +6,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   base: process.env.NODE_ENV === 'production' ? '/my-coffee-app/' : '/',
   plugins: [
-    vue(),
+    vue({
+      template: {
+        compilerOptions: {
+          isCustomElement: tag => tag === 'jeep-sqlite'
+        }
+      }
+    }),
     tailwindcss(),
     VitePWA({
       registerType: 'prompt',
